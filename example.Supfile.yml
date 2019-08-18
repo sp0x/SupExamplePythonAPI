@@ -92,6 +92,10 @@ commands:
     run: find . -type f \( -name 'Dockerfile' -o -name '*.yml' -o -name '*.sh' \) -exec dos2unix {} +
     chdir: $DIR
 
+  perms:
+    run: chown $(whoami):$GROUP -R $DIR; chmod 775 -R $DIR; 
+    chdir: $DIR
+
   slack-notify:
     desc: Notify Slack about new deployment
     local: >
@@ -103,6 +107,7 @@ targets:
   deploy:
     - pre-build
     - push
+    - perms
     - lf
     - build
     - run
