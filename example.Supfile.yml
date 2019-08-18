@@ -1,0 +1,104 @@
+version: 0.4
+
+#The environment vars you'll use
+env:
+  NAME: flask_api
+  IMAGE: netlyt/flask_api
+  SERVICE_NAME: app
+  HOST_PORT: 8089
+  CONTAINER_PORT: 5000
+  DIR: /tmp/$IMAGE
+
+networks:
+  # The staging directory
+  prod:
+    hosts:
+      - <ssh host>
+
+commands:
+  #These commands are just helpers, don't modify them
+  ping:
+    desc: Print uname and current date/time
+    run: uname -a; date
+
+  bash:
+    desc: Interactive shell on all hosts
+    stdin: true
+    run: bash
+
+  pre-build:
+    desc: Prebuild tasks
+    run: mkdir -p $DIR
+
+  build:
+    desc: Build Docker image from current directory, push to Docker Hub
+    # local: sup $SUP_ENV -f ./builder/Supfile $SUP_NETWORK build
+    upload:
+      - src: ./
+        dst: $DIR
+        exclude: node_modules,.git
+    script: ./scripts/docker-build.sh
+    once: true
+ 
+  pull:
+    desc: Pull latest Docker image
+    run: sudo docker-compose pull $SERVICE_NAME
+    chdir: $DIR
+
+  stop:
+    desc: Stop Docker container
+    run: sudo docker-compose stop $SERVICE_NAME || exit 0
+    chdir: $DIR
+
+  rm:
+    desc: Remove Docker container
+    run: sudo docker-compose rm -f $SERVICE_NAME || exit 0 
+    
+  run:
+    desc: Run Docker container
+    run: >
+      sudo docker-compose up -d $SERVICE_NAME
+    chdir: $DIR
+
+  restart:
+    desc: Restart Docker container
+    run: sudo docker-compose restart $SERVICE_NAME || exit 0
+    chdir: $DIR
+
+  ps:
+    desc: List running Docker containers
+    run: sudo docker-compose ps
+    chdir: $DIR
+
+  logs:
+    desc: Docker logs
+    run: sudo docker-compose logs | grep $SERVICE_NAME
+    chdir: $DIR
+
+  tail-logs:
+    desc: Tail Docker logs
+    run: sudo docker-compose logs --tail=20 -f $SERVICE_NAME
+    chdir: $DIR
+
+  health:
+    desc: Application health check
+    run: curl localhost:$HOST_PORT
+
+  slack-notify:
+    desc: Notify Slack about new deployment
+    local: >
+      curl -X POST --data-urlencode 'payload={"channel": "#dev", "text": "['$SUP_NETWORK'] '$SUP_USER' deployed '$NAME'"}' \
+        https://hooks.slack.com/services/ID
+
+
+targets:
+  #The deployment target command, it runs multiple commands one after another, ensuring the previous one returned 0
+  deploy:
+    - pre-build
+    - build
+    - pull
+    - stop-rm-run
+    - ps
+    - logs
+    - health
+    - slack-notify
