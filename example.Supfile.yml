@@ -13,7 +13,7 @@ networks:
   # The staging directory
   prod:
     hosts:
-      - <ssh host>
+      - <ssh_host>
 
 commands:
   #These commands are just helpers, don't modify them
@@ -30,14 +30,17 @@ commands:
     desc: Prebuild tasks
     run: mkdir -p $DIR
 
-  build:
-    desc: Build Docker image from current directory, push to Docker Hub
-    # local: sup $SUP_ENV -f ./builder/Supfile $SUP_NETWORK build
+  push:
+    desc: Push all files from this directory to remote host
     upload:
       - src: ./
         dst: $DIR
         exclude: node_modules,.git
-    script: ./scripts/docker-build.sh
+
+  build:
+    desc: Build Docker image from current directory, push to Docker Hub
+    run: ./scripts/docker-build.sh
+    chdir: $DIR
     once: true
  
   pull:
@@ -84,20 +87,22 @@ commands:
     desc: Application health check
     run: curl localhost:$HOST_PORT
 
+  lf:
+    desc: Corrects your line endings
+    run: find . -type f \( -name 'Dockerfile' -o -name '*.yml' -o -name '*.sh' \) -exec dos2unix {} +
+    chdir: $DIR
+
   slack-notify:
     desc: Notify Slack about new deployment
     local: >
       curl -X POST --data-urlencode 'payload={"channel": "#dev", "text": "['$SUP_NETWORK'] '$SUP_USER' deployed '$NAME'"}' \
         https://hooks.slack.com/services/ID
 
-
 targets:
   #The deployment target command, it runs multiple commands one after another, ensuring the previous one returned 0
   deploy:
     - pre-build
+    - push
+    - lf
     - build
     - run
-    - ps
-    - logs
-    - health
-    - slack-notify

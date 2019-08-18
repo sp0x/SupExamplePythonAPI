@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd /tmp/$IMAGE
+cd $DIR
 
 # Cleanup.
 sudo rm -rf bin
