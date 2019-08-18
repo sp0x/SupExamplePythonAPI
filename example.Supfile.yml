@@ -93,6 +93,7 @@ commands:
     chdir: $DIR
 
   perms:
+    desc: Sets the permissions to the current user and a specific group
     run: chown $(whoami):$GROUP -R $DIR; chmod 775 -R $DIR; 
     chdir: $DIR
 
