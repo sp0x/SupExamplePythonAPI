@@ -1,8 +1,6 @@
 version: "3"
-
 volumes:
   db:
-
 
 services:
   mysql:
