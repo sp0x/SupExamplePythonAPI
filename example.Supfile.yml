@@ -96,8 +96,7 @@ targets:
   deploy:
     - pre-build
     - build
-    - pull
-    - stop-rm-run
+    - run
     - ps
     - logs
     - health
